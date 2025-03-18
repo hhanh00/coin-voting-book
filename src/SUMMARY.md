@@ -36,3 +36,4 @@
     - [Vote Processing](server/vote.md)
     - [Block Producer](server/blocks.md)
     - [RPC](server/rpc.md)
+    - [BFT](server/bft.md)
