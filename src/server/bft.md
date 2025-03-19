@@ -74,3 +74,116 @@ from the mempool
 1. The node commits the change to its database
 
 At this point, every node has the same state.
+
+## How to setup multiple validators
+
+In the following, we'll assume that four validators,
+ECC, ZF, Zechub and ZCG want to run an election
+together and be validators.
+
+A representative of each organization must setup
+a validator node based on the same `genesis.json`
+
+First, everyone must download `cometbft` and initialize
+an environment: `cometbft init`. This creates the directories
+`$HOME/.cometbft` with `config` and `data` subdirectories.
+
+We'll work with the files in the `config` directory.
+- `config.toml`
+- `genesis.json`
+- `priv_validator_key.json`
+
+One of the representative should be chosen to act as the
+aggregator. They will combine the information provided
+by the other representatives and distribute the final
+`genesis.json` and `persistent_peers` config setting.
+
+- Everyone besides the aggregator can delete their `genesis.json`
+file.
+- Everyone needs to send their validator config. It is
+obtained by getting the `address` and `pub_key` fields
+from the `priv_validator_key.json` file.
+
+For example, if the file contains:
+```json
+{
+  "address": "2A30C3FBDE75D364CFE6690648C2AD05B121D90B",
+  "pub_key": {
+    "type": "tendermint/PubKeyEd25519",
+    "value": "A9de3I6FUB8VyGPHoLd4qMnfew5tfVcWyGeHBaa428g="
+  },
+  "priv_key": {
+    "type": "tendermint/PrivKeyEd25519",
+    "value": "7InC0JiIyekU+PwrC0TUGF7JZhk2sYRWflBGgksh7eYD117cjoVQHxXIY8egt3ioyd97Dm19VxbIZ4cFprjbyA=="
+  }
+}
+```
+
+They should send
+```json
+  "address": "2A30C3FBDE75D364CFE6690648C2AD05B121D90B",
+  "pub_key": {
+    "type": "tendermint/PubKeyEd25519",
+    "value": "A9de3I6FUB8VyGPHoLd4qMnfew5tfVcWyGeHBaa428g="
+  },
+```
+
+but *NOT* the `priv_key` part.
+
+The aggregator adds a section:
+```json
+{
+    "address": "2A30C3FBDE75D364CFE6690648C2AD05B121D90B",
+    "pub_key": {
+    "type": "tendermint/PubKeyEd25519",
+    "value": "A9de3I6FUB8VyGPHoLd4qMnfew5tfVcWyGeHBaa428g="
+    },
+    "power": "10",
+    "name": ""
+}
+```
+
+to the validators array of `genesis.json`.
+
+> Note that `power`[^1] and `name` should be added too.
+
+The `genesis.json` file is ready and should be distributed to
+every representative.
+
+Now for the `config.toml`. The only line that must be changed
+is the `persistent_peers`. We have to indicate the node addresses
+of all the validators to seed the network.
+
+- Every representative must run the command `cometbft show-node-id`.
+This returns a hex string like `2ce74cac525f7553be19c0548b3b4ef09e49b6de`.
+The node address is `<NODEID>@<IP>:<PORT>`. For example
+`2ce74cac525f7553be19c0548b3b4ef09e49b6de@zechub.org:26656` [^2]
+
+- Make sure to use the *external* IP address and open the p2p port to
+incoming connections.
+
+The `persistent_peers` is the concatentation of all four node addresses,
+separated by a comma. Every validator should update their config file[^3].
+
+CometBFT is configured to run an application blockchain.
+
+## Extra Nodes
+
+> The `genesis.json` and the `persistent_peers` should be made public
+to allow other nodes to join the same network.
+To setup a node, initialize cometbft, copy `genesis.json`
+and update `persistent_peers`. These nodes are not blockchain
+proposers/validators but they *validate* the ballots.
+
+**Coin voting does not give any validation power to the votes.**
+
+```admonish info
+Running your own node guarantees that your vote will be counted.
+```
+
+---
+[^1]: `power` can be adjusted if you want the validators to have different
+weight.
+[^2]: 26656 is the default peer to peer port. It can be changed in the config file.
+[^3]: it doesn't hurt to have your own node address in the `persistent_peers`
+list.
